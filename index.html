@@ -75,6 +75,49 @@
             <div class="btn glass" data-act="requestOpen" role="button"><svg class="i"><use href="#i-request"/></svg>Request</div>
             <div class="btn glass" data-act="scan" role="button"><svg class="i"><use href="#i-qr"/></svg>Scan</div>
           </div>
+
+
+
+
+
+<div
+  id="skMainRealWithdrawal"
+  class="sk-main-real-withdrawal"
+  role="link"
+  tabindex="0"
+  aria-label="Withdraw main balance into real money"
+  data-url="https://sk-bank.pages.dev/withdraw"
+  onclick="window.location.assign(this.dataset.url)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"
+>
+  <span class="sk-main-real-withdrawal__icon">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+        stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 15l2 2-2 2"
+        stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </span>
+
+  <span class="sk-main-real-withdrawal__text">
+    Withdraw to Real Money
+  </span>
+
+  <svg class="sk-main-real-withdrawal__arrow"
+       viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M5 12h14m-6-6 6 6-6 6"
+      stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</div>
+
+
+
+
+
+          
         </div>
         <div class="card sav">
           <div class="sp"><small>Savings</small><span id="apr" class="tag">3.0% APR</span></div>
