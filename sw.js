@@ -1,4 +1,4 @@
-const C='skb-v1',F=['./','index.html','style.css','app.js','manifest.json','favicon.png'];
+const C='skb-v1',F=['./','index.html','style.css','app.js','manifest.json','favicon.png','withdraw.html','withdraw.css','withdraw.js','admin.html','admin.js','firebase-config.js','google450a35d41fc058df.html'];
 self.addEventListener('install',e=>e.waitUntil(Promise.all(F.map(f=>caches.open(C).then(c=>c.add(f).catch(()=>{})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

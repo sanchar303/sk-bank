@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#060a14">
+  <meta name="description" content="SK Bank Digital Services">
+  <title>SK Bank Withdrawal</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('skb-theme')||'dark'}catch(e){document.documentElement.dataset.theme='dark'}</script>
+  <link rel="stylesheet" href="withdraw.css">
+</head>
+<body>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand" aria-label="SK Bank Withdrawal">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18M5 9v9m4-9v9m6-9v9m4-9v9M3 20h18M12 3l9 5H3l9-5Z"/></svg></span>
+      <span class="brand-copy"><strong>SK BANK</strong><small>WITHDRAWAL</small></span>
+    </div>
+    <div class="topbar-right">
+      <div class="icon-control" id="themeToggle" role="button" tabindex="0" aria-label="Toggle light and dark mode" title="Theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"/></svg>
+      </div>
+      <div class="icon-control" id="hapticToggle" role="button" tabindex="0" aria-label="Toggle haptic feedback" title="Haptics">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 6h4m-3 12h2M3 8v8m18-8v8M1 10v4m22-4v4"/></svg>
+      </div>
+      <div class="back-bank" id="backToBank" role="button" tabindex="0">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5 7 12l7 7M7 12h14"/></svg>
+        <span>Back to Bank App</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="intro-column">
+      <div class="eyebrow"><span class="eyebrow-line"></span> SK BANK</div>
+      <h1>Withdraw<br><span>funds.</span></h1>
+      
+    </section>
+
+    <section class="form-column">
+      <div class="form-card">
+        <div class="card-head">
+          <div><div class="card-kicker">WITHDRAWAL</div><h2>Request funds</h2></div>
+          <span class="card-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM4 7l2-3h12l2 3M8 12h8M8 16h4"/></svg></span>
+        </div>
+
+        <div class="field-block">
+          <label id="accountLabel">BANK ACCOUNT</label>
+          <div class="custom-select" id="accountPicker">
+            <div class="select-trigger" id="usernameSelect" role="combobox" tabindex="0" aria-labelledby="accountLabel" aria-expanded="false" aria-controls="accountOptions" aria-haspopup="listbox">
+              <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              <span id="selectedUsername" class="select-value">Loading accounts…</span>
+              <svg class="select-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+            </div>
+            <div class="select-menu hidden" id="accountOptions" role="listbox" aria-labelledby="accountLabel"><div class="account-search-wrap"><input id="accountSearch" class="account-search" type="search" placeholder="Search username" autocomplete="off" spellcheck="false" aria-label="Search usernames"></div><div id="accountOptionList" class="account-option-list"></div></div>
+          </div>
+          <div class="field-hint" id="directoryHint"> </div>
+        </div>
+
+        <div id="balancePanel" class="balance-panel hidden" aria-live="polite">
+          <div class="balance-top"><span>MAIN BALANCE</span><span class="balance-live-label">LIVE</span></div>
+          <div class="balance-amount" id="balanceValue">$0.00</div>
+          <div class="balance-bottom"><span id="balanceUser">@username</span><span id="balanceUpdated">Connecting…</span></div>
+          <div class="balance-meter"><span id="balanceMeter"></span></div>
+        </div>
+
+        <div id="pendingPanel" class="pending-panel hidden" role="status">
+          <span class="pending-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <div><b>Request pending</b><p>This account is locked until review.</p></div>
+        </div>
+
+        <form id="withdrawalForm" class="withdrawal-form hidden" autocomplete="off" novalidate>
+          <div class="section-divider"><span>AMOUNT</span><i></i></div>
+          <div class="field-block">
+            <label for="amountInput">WITHDRAWAL AMOUNT</label>
+            <div class="amount-shell">
+              <span class="currency-symbol">$</span>
+              <input id="amountInput" class="custom-input amount-input" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" required>
+              <div class="max-button" id="maxButton" role="button" tabindex="0">MAX</div>
+            </div>
+            <div class="amount-meta"><span>Minimum $0.01</span><span>Maximum <b id="maxAmount">$0.00</b></span></div>
+          </div>
+          <div class="request-preview" id="requestPreview">
+            <div><span>Requested amount</span><b id="previewAmount">$0.00</b></div>
+            <div><span>Interest / fee</span><b class="zero">$0.00</b></div>
+            <div class="preview-total"><span>Amount deducted</span><b id="deductionAmount">$0.00</b></div>
+          </div>
+
+          <div class="section-divider"><span>VERIFICATION</span><i></i></div>
+          <div class="field-block">
+            <label for="passwordInput">ACCOUNT PASSWORD</label>
+            <div class="input-shell">
+              <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input id="passwordInput" class="custom-input" type="password" autocomplete="current-password" placeholder="Password" required>
+              <div class="reveal-button" role="button" tabindex="0" data-toggle-password="passwordInput" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+            </div>
+          </div>
+          <div class="field-block">
+            <label for="pinInput">TRANSACTION PIN</label>
+            <div class="input-shell">
+              <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-2 2"/></svg>
+              <input id="pinInput" class="custom-input" type="password" inputmode="numeric" autocomplete="off" minlength="4" maxlength="6" placeholder="4–6 digit PIN" required>
+              <div class="reveal-button" role="button" tabindex="0" data-toggle-password="pinInput" aria-label="Show PIN"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+            </div>
+          </div>
+
+          <div class="authorization-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 6v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Credentials are not saved.</span></div>
+          <div class="submit-button" id="submitButton" role="button" tabindex="0"><span>Submit request</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </form>
+
+        <div id="successPanel" class="success-panel hidden" role="status">
+          <div class="success-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></div>
+          <h3>Request submitted</h3>
+          <p>Awaiting review.</p>
+          <div class="success-details"><div><span>Request ID</span><b id="successId">—</b></div><div><span>Amount deducted</span><b id="successAmount">$0.00</b></div><div><span>Status</span><b class="status-pending">Pending</b></div></div>
+          <div class="secondary-button" id="newRequestButton" role="button" tabindex="0">Done</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer">SK Bank Digital Services. All rights reserved.</footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"><span class="toast-mark"></span><span id="toastMessage"></span></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="withdraw.js"></script>
+</body>
+</html>
