@@ -1,9 +1,10 @@
 'use strict';
 const firebaseConfig={apiKey:"AIzaSyDpCAXfhldRc1nCZDWlWNRbcMFjqAh8uPc",authDomain:"cloud-db-studio.firebaseapp.com",databaseURL:"https://cloud-db-studio-default-rtdb.firebaseio.com",projectId:"cloud-db-studio",storageBucket:"cloud-db-studio.firebasestorage.app",messagingSenderId:"343326148662",appId:"1:343326148662:web:987738ccc8f9d6a8253097"};
 firebase.initializeApp(firebaseConfig);
+const MAIN_APP_URL='index.html';
 const bank=firebase.database().ref('sk-bank'),increment=firebase.database.ServerValue.increment;
 const pick=selector=>document.querySelector(selector);
-const state={accounts:[],names:{},pending:{},selected:null,balance:0,useMax:false,busy:false,failures:0,lockedUntil:0,balanceRef:null};
+const state={accounts:[],names:{},pending:{},selected:null,balance:0,useMax:false,busy:false,failures:0,lockedUntil:0,balanceRef:null,accountsReady:false,pendingReady:false,requestedHandled:false};
 const roundCents=value=>Math.round((+value+Number.EPSILON)*100)/100;
 const floorCents=value=>Math.floor((+value+1e-9)*100)/100;
 const formatMoney=value=>'$'+(+value||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -23,20 +24,37 @@ function showToast(message,type='info'){
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>toast.classList.remove('show'),2800);
 }
-
+function navigateTo(address){
+  document.body.classList.add('leaving');
+  setTimeout(()=>{window.location.href=address},260);
+}
+function applyTheme(theme){
+  document.documentElement.dataset.theme=theme;
+  localStorage.setItem('skb-theme',theme);
+  pick('meta[name=theme-color]').content=theme==='light'?'#e9eff9':'#060a14';
+}
 async function loadAccounts(){
   try{
     const response=await fetch(firebaseConfig.databaseURL+'/sk-bank/users.json?shallow=true');
-    const keys=Object.keys(await response.json()||{});
-    state.accounts=keys.filter(username=>username!=='admin').sort();
+    state.accounts=Object.keys(await response.json()||{}).filter(username=>username!=='admin').sort();
   }catch(error){showToast('Could not load accounts','error')}
+  state.accountsReady=true;
   renderDropdown();
+  applyRequestedAccount();
+}
+function applyRequestedAccount(){
+  if(state.requestedHandled||!state.accountsReady||!state.pendingReady)return;
+  state.requestedHandled=true;
+  const requested=new URLSearchParams(window.location.search).get('account');
+  if(!requested||!state.accounts.includes(requested))return;
+  if(state.pending[requested])return showToast('This account already has a pending request','info');
+  selectAccount(requested);
 }
 function renderDropdown(){
   const query=pick('#ddSearch').value.trim().toLowerCase();
   pick('#ddItems').innerHTML=state.accounts.filter(username=>!query||username.includes(query)||(state.names[username]||'').toLowerCase().includes(query)).map(username=>{
     const pending=Boolean(state.pending[username]);
-    return`<div class="dd-item${pending?' off':''}" data-act="${pending?'':'select'}" data-u="${escapeHtml(username)}"><div class="av">${escapeHtml(username[0].toUpperCase())}</div><div class="who"><b>@${escapeHtml(username)}</b><small>${escapeHtml(state.names[username]||'')}</small></div>${pending?'<span class="tag">Pending</span>':''}</div>`;
+    return`<div class="row acct${pending?' off':''}" ${pending?'':'data-act="select" '}data-u="${escapeHtml(username)}"><div class="av sm">${escapeHtml(username[0].toUpperCase())}</div><div class="gr"><b>@${escapeHtml(username)}</b><small>${escapeHtml(state.names[username]||'')}</small></div>${pending?'<span class="tag">Pending</span>':''}</div>`;
   }).join('')||'<div class="empty">No accounts</div>';
 }
 function selectAccount(username){
@@ -134,7 +152,9 @@ const actions={
     evaluate();
   },
   submit:submitRequest,
-  again:reset
+  again:reset,
+  home:()=>navigateTo(MAIN_APP_URL),
+  toggleTheme:()=>applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light')
 };
 document.addEventListener('click',event=>{
   const target=event.target.closest('[data-act]');
@@ -144,11 +164,14 @@ document.addEventListener('click',event=>{
 pick('#amount').addEventListener('input',()=>{state.useMax=false;evaluate()});
 pick('#ddSearch').addEventListener('input',renderDropdown);
 ['gesturestart','gesturechange','gestureend'].forEach(type=>document.addEventListener(type,event=>event.preventDefault()));
+addEventListener('pageshow',event=>{if(event.persisted)document.body.classList.remove('leaving')});
 bank.child('pendingWithdrawals').on('value',snapshot=>{
   state.pending=snapshot.val()||{};
+  state.pendingReady=true;
   if(state.selected&&state.pending[state.selected]&&!state.busy&&pick('#doneCard').classList.contains('hide'))reset();
   renderDropdown();
   evaluate();
+  applyRequestedAccount();
 });
 bank.child('network').on('value',snapshot=>{
   state.names={};
