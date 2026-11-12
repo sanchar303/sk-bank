@@ -1,12 +1,15 @@
 {
+  "id": "./",
   "name": "SK Bank",
   "short_name": "SK Bank",
+  "description": "SK Bank",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a3d91",
-  "theme_color": "#0a3d91",
+  "background_color": "#060a14",
+  "theme_color": "#060a14",
+  "categories": ["finance"],
   "icons": [
     { "src": "favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }

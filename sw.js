@@ -1,8 +1,20 @@
-const C='skb-v1',F=['./','index.html','style.css','app.js','manifest.json','favicon.png','withdraw.html','withdraw.css','withdraw.js','admin.html','admin.js','firebase-config.js','google450a35d41fc058df.html'];
-self.addEventListener('install',e=>e.waitUntil(Promise.all(F.map(f=>caches.open(C).then(c=>c.add(f).catch(()=>{})))).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{
-  const r=e.request;
-  if(r.method!=='GET'||new URL(r.url).origin!==location.origin)return;
-  e.respondWith(fetch(r).then(x=>{if(x.ok){const y=x.clone();caches.open(C).then(c=>c.put(r,y))}return x}).catch(()=>caches.match(r).then(m=>m||caches.match('index.html'))));
+const CACHE='skb-v3';
+const SHELL=['./','index.html','style.css','app.js','manifest.json','favicon.png'];
+const isShell=url=>{const file=url.pathname.split('/').pop();return file===''||SHELL.includes(file)};
+
+self.addEventListener('install',event=>event.waitUntil(
+  caches.open(CACHE).then(cache=>Promise.all(SHELL.map(file=>cache.add(file).catch(()=>{})))).then(()=>self.skipWaiting())
+));
+self.addEventListener('activate',event=>event.waitUntil(
+  caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())
+));
+self.addEventListener('fetch',event=>{
+  const request=event.request,url=new URL(request.url);
+  if(request.method!=='GET'||url.origin!==location.origin||!isShell(url))return;
+  event.respondWith(
+    fetch(request).then(response=>{
+      if(response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy))}
+      return response;
+    }).catch(()=>caches.match(request).then(cached=>cached||caches.match('index.html')))
+  );
 });

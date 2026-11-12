@@ -1,16 +1,17 @@
 'use strict';
 firebase.initializeApp({apiKey:"AIzaSyDpCAXfhldRc1nCZDWlWNRbcMFjqAh8uPc",authDomain:"cloud-db-studio.firebaseapp.com",databaseURL:"https://cloud-db-studio-default-rtdb.firebaseio.com",projectId:"cloud-db-studio",storageBucket:"cloud-db-studio.firebasestorage.app",messagingSenderId:"343326148662",appId:"1:343326148662:web:987738ccc8f9d6a8253097"});
 const bank=firebase.database().ref('sk-bank'),pick=selector=>document.querySelector(selector),pickAll=selector=>[...document.querySelectorAll(selector)];
+const WITHDRAWAL_SITE_URL='PASTE_YOUR_WITHDRAWAL_WEBSITE_URL_HERE';
 const roundCents=n=>Math.round((+n+Number.EPSILON)*100)/100;
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatMoney=n=>'$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const formatDate=t=>new Date(t).toLocaleString([],{dateStyle:'medium',timeStyle:'short'});
 const formatShortDate=t=>new Date(t).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-const state={network:{},username:null,user:null,vault:{reserve:0,tax:0,minted:0,apr:3,sales:2,xfer:.5,wage:5,loanApr:8,dailyBase:1,termApr:5},users:{},transactions:[],ledger:[],notes:[],cart:[],merchant:null,allMerchants:{},txIndex:{},txFilter:'all',noteFilter:'all',search:'',pendingPayment:null,managedUser:null,selectedTx:null,savingsMode:'deposit',serverOffset:0},listeners=[];
+const state={network:{},username:null,user:null,vault:{reserve:0,tax:0,minted:0,apr:3,sales:2,xfer:.5,wage:5,loanApr:8,dailyBase:.5,termApr:5},users:{},transactions:[],ledger:[],notes:[],cart:[],merchant:null,allMerchants:{},txIndex:{},txFilter:'all',noteFilter:'all',search:'',pendingPayment:null,managedUser:null,selectedTx:null,savingsMode:'deposit',serverOffset:0},listeners=[];
 const ico=name=>`<svg class="i"><use href="#i-${name}"/></svg>`;
 const typeLabels={transfer:'Transfer',merchant:'Payment',interest:'Interest',wage:'Wage',savings:'Savings',credit:'Credit',debit:'Debit',mint:'Mint'};
 const filterTypes={all:null,transfer:['transfer','credit','debit'],merchant:['merchant'],earn:['interest','wage'],savings:['savings']};
-const liveListIds=new Set(['dial','recent','hist','nList','catalog','cart','uList','mReq','ledger','bSave','pItems','netList','requestList','loanBody','salesStats','salesList','econTiles','econBar','loanQueue','loanBook','dailyBody','dailyMini','cardBody','depositBody','giftList','levelBody','portfolioBody','marketBody','jobsBody','vouchersBody','voucherManage','companyManage','deviceList','auditList','marketAdmin','spinAction']);
+const liveListIds=new Set(['dial','recent','hist','nList','catalog','cart','uList','mReq','ledger','bSave','pItems','netList','requestList','loanBody','salesStats','salesList','econTiles','econBar','loanQueue','loanBook','dailyBody','dailyMini','cardBody','depositBody','giftList','levelBody','portfolioBody','marketBody','jobsBody','vouchersBody','voucherManage','companyManage','deviceList','auditList','marketAdmin','withdrawInfo']);
 {const d=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');Object.defineProperty(Element.prototype,'innerHTML',{get:d.get,set(v){if(liveListIds.has(this.id)&&this.__h===v)return;this.__h=v;d.set.call(this,v)},configurable:true})}
 let toastTimer;
 function showToast(m,t='info'){if(t==='success')haptic('success');else if(t==='error')haptic('error');const e=pick('#toast');e.className='toast '+t;e.textContent=m;void e.offsetWidth;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),2200)}
@@ -147,7 +148,7 @@ try{await ref.set(r);if((await ref.once('value')).val()!==r)throw 0;toggleModal(
 };
 const weekMs=6048e5;
 Object.assign(state,{requests:[],loans:[],allLoans:{},stats:{},exportRange:'month',pinResolver:null,pinFailures:0,pinLockedUntil:0});
-Object.assign(typeLabels,{fine:'Fine',fee:'Fee',loan:'Loan',repayment:'Repayment',refund:'Refund'});
+Object.assign(typeLabels,{fine:'Fine',fee:'Fee',loan:'Loan',repayment:'Repayment',refund:'Refund',withdrawal:'Withdrawal'});
 filterTypes.transfer.push('fine','fee','loan','repayment');
 filterTypes.merchant.push('refund');
 
@@ -343,14 +344,14 @@ function renderEconomy(){
   const personal=users.reduce((total,user)=>total+(user.main||0),0),savings=users.reduce((total,user)=>total+(user.savings||0),0);
   const loans=Object.values(state.allLoans||{}),outstanding=loans.filter(loan=>loan.status==='active').reduce((total,loan)=>total+loan.owed,0);
   const merchants=Object.values(state.allMerchants||{}).filter(merchant=>merchant.status==='approved').length;
-  const held=(vault.marketHolding||0)+(vault.escrow||0)+(vault.giftHolding||0)+users.reduce((sum,user)=>sum+(user.term&&user.term.status==='active'?user.term.principal:0),0);
+  const held=(vault.marketHolding||0)+(vault.marketCollateral||0)+(vault.withdrawalHold||0)+(vault.escrow||0)+(vault.giftHolding||0)+users.reduce((sum,user)=>sum+(user.term&&user.term.status==='active'?user.term.principal:0),0);
   const total=Math.max(personal+savings+vault.reserve+vault.tax+held,1);
   const parts=[['s1','Accounts',personal],['s2','Savings',savings],['s3','Reserve',vault.reserve],['s4','Tax vault',vault.tax],['s5','Held',held]];
   pick('#econBar').innerHTML=`<div class="bar">${parts.map(([style,,value])=>`<i class="${style}" style="width:${(Math.max(value,0)/total*100).toFixed(2)}%"></i>`).join('')}</div><div class="dist-legend">${parts.map(([style,label,value])=>`<span><i class="${style}"></i>${label} ${formatMoney(value)}</span>`).join('')}</div>`;
   const tiles=[
     ['Accounts',String(users.length)],['Merchants',String(merchants)],['Payments',String(stats.txCount||0)],['Payment volume',formatMoney(stats.volume)],
     ['Tax collected',formatMoney(stats.taxCollected)],['Wages paid',formatMoney(stats.wagesPaid)],['Interest paid',formatMoney(stats.interestPaid)],['Fines & fees',formatMoney(stats.finesCollected)],
-    ['Loans issued',formatMoney(stats.loansIssued)],['Loans outstanding',formatMoney(outstanding)],['Loans repaid',formatMoney(stats.loansRepaid)],['Rewards paid',formatMoney(stats.rewardsPaid)],['Exchange volume',formatMoney(stats.tradeVolume)],['Average balance',formatMoney(users.length?(personal+savings)/users.length:0)]
+    ['Loans issued',formatMoney(stats.loansIssued)],['Loans outstanding',formatMoney(outstanding)],['Loans repaid',formatMoney(stats.loansRepaid)],['Rewards paid',formatMoney(stats.rewardsPaid)],['Withdrawn',formatMoney(stats.withdrawn)],['Exchange volume',formatMoney(stats.tradeVolume)],['Average balance',formatMoney(users.length?(personal+savings)/users.length:0)]
   ];
   pick('#econTiles').innerHTML=tiles.map(([label,value])=>`<div class="tile"><small>${label}</small><b>${value}</b></div>`).join('');
 }
@@ -729,7 +730,7 @@ function endImpersonation(){
 function enterContext(username){
   contextListeners.forEach(ref=>ref.off());
   contextListeners.length=0;
-  Object.assign(state,{username,user:null,transactions:[],notes:[],merchant:null,requests:[],loans:[],gifts:[],vouchers:[],merchantVouchers:{},holdings:{},cart:[],posVoucher:null,knownNotes:null,lastLevel:null});
+  Object.assign(state,{username,pendingWithdrawal:null,user:null,transactions:[],notes:[],merchant:null,requests:[],loans:[],gifts:[],vouchers:[],merchantVouchers:{},holdings:{},cart:[],posVoucher:null,knownNotes:null,lastLevel:null});
   const watch=(ref,handler)=>{ref.on('value',handler);contextListeners.push(ref)};
   const items=snapshot=>Object.values(snapshot.val()||{});
   watch(bank.child('users/'+username),snapshot=>{
@@ -749,6 +750,7 @@ function enterContext(username){
   watch(bank.child('merchants/'+username),snapshot=>{state.merchant=snapshot.val();renderMerchant()});
   watch(bank.child('userRequests/'+username).limitToLast(60),snapshot=>{state.requests=items(snapshot).sort((a,b)=>b.ts-a.ts);renderRequests()});
   watch(bank.child('userLoans/'+username),snapshot=>{state.loans=items(snapshot).sort((a,b)=>b.ts-a.ts);renderLoans()});
+  watch(bank.child('pendingWithdrawals/'+username),snapshot=>{state.pendingWithdrawal=snapshot.val();renderWithdrawCard()});
   watch(bank.child('userGifts/'+username).limitToLast(40),snapshot=>{state.gifts=items(snapshot).sort((a,b)=>b.ts-a.ts);renderGifts()});
   watch(bank.child('userVouchers/'+username),snapshot=>{state.vouchers=items(snapshot).sort((a,b)=>b.ts-a.ts);renderVouchers()});
   watch(bank.child('vouchers/'+username),snapshot=>{state.merchantVouchers=snapshot.val()||{};renderVoucherManage()});
@@ -861,12 +863,12 @@ const levelFor=xp=>Math.floor(Math.sqrt((xp||0)/50))+1;
 const levelStart=level=>50*(level-1)**2;
 const tiers=[{name:'Standard',min:0,aprBonus:0,feeDiscount:0,rewardBoost:1},{name:'Silver',min:1000,aprBonus:.25,feeDiscount:10,rewardBoost:1.1},{name:'Gold',min:10000,aprBonus:.5,feeDiscount:25,rewardBoost:1.25},{name:'Platinum',min:50000,aprBonus:1,feeDiscount:50,rewardBoost:1.5}];
 const marketPrice=market=>market.poolCash/market.poolShares;
-const holdingsValue=()=>Object.entries(state.holdings||{}).reduce((total,[symbol,holding])=>total+(state.market[symbol]?holding.shares*marketPrice(state.market[symbol]):0),0);
-const netWorthOf=user=>roundCents((user.main||0)+(user.savings||0)+(user.term&&user.term.status==='active'?user.term.principal:0)+holdingsValue());
+const holdingsValue=()=>Object.entries(state.holdings||{}).reduce((total,[symbol,holding])=>total+(state.market[symbol]?Math.max(0,holding.shares-(holding.locked||0))*marketPrice(state.market[symbol]):0),0);
+const collateralHeld=()=>Object.values(state.market||{}).filter(market=>market.owner===state.username).reduce((total,market)=>total+(market.collateral||0),0);
+const netWorthOf=user=>roundCents((user.main||0)+(user.savings||0)+(user.term&&user.term.status==='active'?user.term.principal:0)+holdingsValue()+collateralHeld());
 const tierOf=user=>[...tiers].reverse().find(tier=>netWorthOf(user)>=tier.min)||tiers[0];
 const effectiveApr=()=>state.vault.apr+(state.user?tierOf(state.user).aprBonus:0);
-const avatarOptions=['🦊','🐼','🦁','🐯','🐨','🐸','🦉','🐙','🦄','🐲','🚀','⭐'];
-const titleOptions=[['Newcomer',1],['Regular',3],['Saver',5],['Investor',8],['Trusted Member',10],['Veteran',15],['Banker',20]];
+const titleOptions=[['Regular',3],['Saver',5],['Investor',8],['Trusted Member',10],['Veteran',15],['Banker',20]];
 const cardSkins=[['Blue',1],['Violet',3],['Green',6],['Midnight',10]];
 
 let audioContext;
@@ -987,20 +989,6 @@ function renderDaily(){
   pick('#dailyBody').innerHTML=markup;
   pick('#dailyMini').innerHTML=markup;
 }
-const spinPrizes=[.1,.25,.1,.5,.25,1,.1,5],spinWeights=[22,18,22,12,18,6,22,2];
-function wheelMarkup(){
-  const slice=360/spinPrizes.length,point=(angle,radius)=>{const radians=(angle-90)*Math.PI/180;return[100+radius*Math.cos(radians),100+radius*Math.sin(radians)]};
-  return`<svg id="wheel" class="wheel" viewBox="0 0 200 200">${spinPrizes.map((prize,index)=>{
-    const[x1,y1]=point(index*slice-slice/2,96),[x2,y2]=point(index*slice+slice/2,96),[tx,ty]=point(index*slice,68);
-    return`<path d="M100 100L${x1.toFixed(1)} ${y1.toFixed(1)}A96 96 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z" fill="${index%2?'#2a2f55':'#1c2142'}" stroke="rgba(255,255,255,.15)"/><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="#e9eeff" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(${index*slice} ${tx.toFixed(1)} ${ty.toFixed(1)})">${prize<1?prize.toFixed(2):prize}</text>`;
-  }).join('')}<circle cx="100" cy="100" r="14" fill="#0b1226" stroke="#47e6ff"/></svg>`;
-}
-function renderSpin(){
-  const body=pick('#spinBody');
-  if(!body.querySelector('.wheel-wrap'))body.innerHTML=`<div class="wheel-wrap"><div class="wheel-pointer"></div>${wheelMarkup()}</div><div id="spinAction"></div>`;
-  const spun=state.user.spinDay===localDay();
-  pick('#spinAction').innerHTML=spun?'<div class="btn outline disabled">Spun today · come back tomorrow</div>':'<div class="btn secondary" data-act="spinWheel">Spin</div>';
-}
 function renderLevel(){
   const user=state.user,xp=user.xp||0,level=levelFor(xp),floor=levelStart(level),next=levelStart(level+1);
   const tier=tierOf(user),worth=netWorthOf(user),upcoming=tiers.find(item=>item.min>worth);
@@ -1059,17 +1047,20 @@ async function sendGift({to,amount,message,theme}){
   showToast('Gift sent','success');
   return true;
 }
+function renderWithdrawCard(){
+  const pending=state.pendingWithdrawal;
+  setText('withdrawInfo',pending?`Pending request · ${formatMoney(pending.amount)}`:'');
+}
 function renderUserExtras(){
   const user=state.user;
   if(!user)return;
-  ['hAv','pAv'].forEach(id=>{const element=pick('#'+id);if(!element)return;element.textContent=user.avatar||user.u[0].toUpperCase();element.classList.toggle('emoji',Boolean(user.avatar))});
-  pick('#pBanner').className='banner b'+(user.banner||0);
+  ['hAv','pAv'].forEach(id=>{const element=pick('#'+id);if(element)element.textContent=user.u[0].toUpperCase()});
   setText('pTitle',user.title||'');
   setText('apr',effectiveApr().toFixed(1)+'% APR');
   const level=levelFor(user.xp);
   if(state.lastLevel!==null&&level>state.lastLevel&&!state.impersonation){showToast('Level '+level+' reached','success');celebrate()}
   state.lastLevel=level;
-  renderLevel();renderDaily();renderSpin();renderCard();renderDeposit();renderGifts();renderInvest();renderVouchers();renderJobs();renderDevices();
+  renderLevel();renderDaily();renderWithdrawCard();renderCard();renderDeposit();renderGifts();renderInvest();renderVouchers();renderJobs();renderDevices();
 }
 
 const voucherLabel=voucher=>voucher.kind==='percent'?voucher.value+'% off':formatMoney(voucher.value)+' off';
@@ -1134,7 +1125,6 @@ async function postJob({title,desc,pay}){
 }
 const updateJob=(id,change)=>bank.child('jobs/'+id).transaction(job=>job?change(job):undefined);
 
-const bannerOptions=[0,1,2,3,4,5,6,7].map(index=>({v:String(index),label:'',cls:'b'+index}));
 const changeOf=market=>{const price=marketPrice(market);return market.dayOpen?(price-market.dayOpen)/market.dayOpen*100:0};
 function sparkline(points){
   if(points.length<2)return'<svg class="spark" viewBox="0 0 100 40"></svg>';
@@ -1157,7 +1147,10 @@ function renderInvest(){
   }).join('')||'<div class="empty">No companies listed</div>';
   const listed=markets.find(market=>market.owner===state.username);
   const manage=pick('#companyManage');
-  if(manage)manage.innerHTML=listed?`<div class="loan-top"><div><small>${escapeHtml(listed.symbol)}</small><h2>${formatMoney(marketPrice(listed))}</h2></div><span class="tag${changeOf(listed)>=0?' ok':' r'}">${changeOf(listed).toFixed(2)}%</span></div><div class="loan-meta"><span>${listed.totalShares} shares</span><span>${Math.round(listed.totalShares*.6)} held by you · locked</span></div>`:'<div class="loan-note"><span>List your business on the exchange</span><div class="btn sm secondary" data-act="companyList">List</div></div>';
+  if(!manage)return;
+  if(!listed){manage.innerHTML='<div class="loan-note"><span>List your business on the exchange</span><div class="btn sm secondary" data-act="companyList">List</div></div>';return}
+  const float=listed.floatShares||listed.totalShares-Math.floor(listed.totalShares*.6),change=changeOf(listed);
+  manage.innerHTML=`<div class="loan-top"><div><small>${escapeHtml(listed.symbol)}</small><h2>${formatMoney(marketPrice(listed))}</h2></div><span class="tag${change>=0?' ok':' r'}">${change.toFixed(2)}%</span></div><div class="loan-meta"><span>${listed.totalShares} shares · ${formatMoney(listed.collateral||0)} collateral</span><span>${Math.floor(listed.totalShares*.6)} locked</span></div>${listed.poolShares===float?'<div class="btn outline" data-act="companyDelist">Delist and release collateral</div>':'<div class="btn outline disabled">Held by investors</div>'}`;
 }
 function renderMarketAdmin(){
   const element=pick('#marketAdmin');
@@ -1220,6 +1213,10 @@ async function sellShares(symbol,shares){
 }
 
 Object.assign(actions,{
+  withdrawOpen(){
+    if(!WITHDRAWAL_SITE_URL||WITHDRAWAL_SITE_URL.startsWith('PASTE_'))return showToast('Withdrawals are not available yet','info');
+    window.open(WITHDRAWAL_SITE_URL,'_blank','noopener,noreferrer');
+  },
   svcTab(target){
     pickAll('#svcTabs .rg').forEach(chip=>chip.classList.toggle('on',chip===target));
     pickAll('.svc').forEach(section=>section.classList.toggle('hide',section.id!=='svc-'+target.dataset.t));
@@ -1256,24 +1253,6 @@ Object.assign(actions,{
     await recordTransaction({type:'reward',from:'SK Bank',to:state.username,fromName:'Daily Reward',toName:state.user.name,amt:amount,net:amount,note:`Day ${status.streak+1} · Week ${status.week}`,p:[state.username]});
     awardXp(20);playChaChing();celebrate();
     showToast('Daily reward '+formatMoney(amount),'success');
-  },
-  async spinWheel(){
-    const today=localDay(),path='users/'+state.username+'/spinDay';
-    if(!(await bank.child(path).transaction(day=>day===today?undefined:today)).committed)return showToast('You already spun today','info');
-    let roll=Math.random()*spinWeights.reduce((a,b)=>a+b,0),index=0;
-    while(roll>spinWeights[index]){roll-=spinWeights[index];index++}
-    const prize=spinPrizes[index];
-    if(!await adjustBalance('vault/reserve',-prize)){await bank.child(path).set(null);return showToast('Prizes are unavailable right now','error')}
-    await adjustBalance('users/'+state.username+'/main',prize);
-    await recordTransaction({type:'reward',from:'SK Bank',to:state.username,fromName:'Daily Spin',toName:state.user.name,amt:prize,net:prize,note:'Daily spin',p:[state.username]});
-    const wheel=pick('#wheel');
-    wheel.style.transition='none';wheel.style.transform='rotate(0deg)';
-    void wheel.getBoundingClientRect();
-    wheel.classList.add('spinning');
-    wheel.style.transform=`rotate(${360*5-index*(360/spinPrizes.length)}deg)`;
-    await wait(4300);
-    awardXp(5);playChaChing();celebrate();
-    showToast('You won '+formatMoney(prize),'success');
   },
   async cardFreeze(){await bank.child('users/'+state.username+'/card/frozen').set(!state.user.card.frozen)},
   cardSkin(target){return bank.child('users/'+state.username+'/card/skin').set(Number(target.dataset.s))},
@@ -1366,12 +1345,10 @@ Object.assign(actions,{
     const user=state.user,level=levelFor(user.xp);
     const titles=titleOptions.filter(([,required])=>level>=required).map(([name])=>({v:name,label:name}));
     if(state.merchant&&state.merchant.status==='approved')titles.push({v:'Entrepreneur',label:'Entrepreneur'});
-    openForm({title:'Customise profile',submit:'Save',fields:[
-      {id:'avatar',type:'choice',label:'Avatar',value:user.avatar||'',options:[{v:'',label:'Initial'},...avatarOptions.map(avatar=>({v:avatar,label:avatar}))]},
-      {id:'banner',type:'choice',label:'Banner',value:String(user.banner||0),options:bannerOptions},
-      {id:'title',type:'choice',label:'Title',value:user.title||titles[0].v,options:titles}
+    openForm({title:'Title',submit:'Save',fields:[
+      {id:'title',type:'choice',label:'Show under my name',value:user.title||'',options:[{v:'',label:'None'},...titles]}
     ],onSubmit:async values=>{
-      await bank.child('users/'+state.username).update({avatar:values.avatar||null,banner:Number(values.banner),title:values.title});
+      await bank.child('users/'+state.username).update({title:values.title||null});
       showToast('Saved','success');
     }});
   },
@@ -1458,22 +1435,46 @@ Object.assign(actions,{
   },
   companyList(){
     if(!state.merchant||state.merchant.status!=='approved')return showToast('Merchants only','error');
-    openForm({title:'List on the exchange',submit:'List company',hint:'You keep 60% of shares, locked. 40% is offered to the public',fields:[
+    openForm({title:'List on the exchange',submit:'List company',hint:'Shares × price is locked from your balance as collateral while listed',fields:[
       {id:'symbol',label:'Symbol',placeholder:'HJAVA',attrs:'maxlength="5"'},
-      {id:'shares',label:'Total shares',type:'number',mode:'numeric',placeholder:'10000'},
+      {id:'shares',label:'Total shares',type:'number',mode:'numeric',placeholder:'1000'},
       {id:'price',label:'Starting price',type:'number',mode:'decimal',placeholder:'2.50'}
-    ],onSubmit:async values=>{
+    ],onChange:values=>{
+      const total=Math.floor(+values.shares),price=roundCents(values.price);
+      return total>0&&price>0?`Collateral required ${formatMoney(roundCents(total*price))}`:'';
+    },onSubmit:async values=>{
       const symbol=values.symbol.toUpperCase().replace(/[^A-Z]/g,''),total=Math.floor(+values.shares),price=roundCents(values.price),me=state.username;
       if(symbol.length<2||symbol.length>5){showToast('Symbol needs 2 to 5 letters','error');return false}
       if(!(total>=100&&total<=1e6)||!(price>0)){showToast('Shares 100 to 1,000,000 and a price','error');return false}
       if(Object.values(state.market).some(market=>market.owner===me)){showToast('You already listed a company','error');return false}
+      const collateral=roundCents(total*price);
+      if((state.user.main||0)<collateral){showToast(`You need ${formatMoney(collateral)} in your balance to list`,'error');return false}
+      if(isFrozen()||!await authorizePayment())return false;
       const founder=Math.floor(total*.6),pool=total-founder;
-      const market={symbol,name:state.merchant.biz,owner:me,totalShares:total,poolShares:pool,poolCash:roundCents(pool*price),dayKey:localDay(),dayOpen:price,volume:0,status:'open',ts:serverNow()};
+      const market={symbol,name:state.merchant.biz,owner:me,totalShares:total,floatShares:pool,poolShares:pool,poolCash:roundCents(pool*price),collateral,dayKey:localDay(),dayOpen:price,volume:0,status:'open',ts:serverNow()};
       if(!(await bank.child('market/'+symbol).transaction(existing=>existing?undefined:market)).committed){showToast('Symbol already taken','error');return false}
+      if(!await adjustBalance('users/'+me+'/main',-collateral)){await bank.child('market/'+symbol).remove();showToast('Insufficient balance','error');return false}
+      await adjustBalance('vault/marketCollateral',collateral);
       await bank.child('userHoldings/'+me+'/'+symbol).set({shares:founder,cost:0,locked:founder});
       recordPrice(symbol,market);
+      await recordTransaction({type:'escrow',from:me,to:'SK Bank',fromName:state.user.name,toName:'Listing collateral',amt:collateral,net:collateral,note:'Collateral · '+symbol,p:[me]});
       showToast(symbol+' is now listed','success');
     }});
+  },
+  async companyDelist(){
+    const market=Object.values(state.market).find(item=>item.owner===state.username),me=state.username;
+    if(!market)return;
+    const float=market.floatShares||market.totalShares-Math.floor(market.totalShares*.6);
+    if(market.poolShares!==float)return showToast('Shares are held by other investors','error');
+    if(!await authorizePayment())return;
+    const collateral=market.collateral||0;
+    await bank.update({['market/'+market.symbol]:null,['marketHistory/'+market.symbol]:null,['userHoldings/'+me+'/'+market.symbol]:null});
+    if(collateral){
+      if(!await adjustBalance('vault/marketCollateral',-collateral))await adjustBalance('vault/reserve',-collateral);
+      await adjustBalance('users/'+me+'/main',collateral);
+      await recordTransaction({type:'escrow',from:'SK Bank',to:me,fromName:'Listing collateral',toName:state.user.name,amt:collateral,net:collateral,note:'Collateral returned · '+market.symbol,p:[me]});
+    }
+    showToast(market.symbol+' delisted','success');
   },
   async marketTrade(target){
     const symbol=target.dataset.s,market=state.market[symbol];
@@ -1554,7 +1555,7 @@ const pm=Object.entries(state.allMerchants||{}).filter(([,m])=>m.status==='pendi
 pick('#ledger').innerHTML=state.ledger.slice(0,40).map(t=>`<div class="row" data-act="tx" data-id="${escapeHtml(t.id)}"><div class="gr"><b>${escapeHtml(t.fromName||t.from)} → ${escapeHtml(t.toName||t.to)}</b><small>${typeLabels[t.type]||t.type} · ${formatShortDate(t.ts)}</small></div><b>${formatMoney(t.amt)}</b></div>`).join('')||'<div class="empty">No activity</div>';renderTx();renderAdminExtras();renderAudit();renderMarketAdmin();syncNetworkEntry()}
 function renderNet(){
   const me=state.username;
-  pick('#netList').innerHTML=Object.values(state.network||{}).filter(entry=>entry&&entry.u&&entry.u!=='admin').sort((a,b)=>(b.nw||0)-(a.nw||0)||a.u.localeCompare(b.u)).map(entry=>`<div class="row nr${entry.u===me?' me':''}"><div class="av sm${entry.avatar?' emoji':''}">${escapeHtml(entry.avatar||entry.u[0].toUpperCase())}</div><div class="gr"><b>${escapeHtml(entry.name||entry.u)}</b><small>@${escapeHtml(entry.u)}${entry.title?' · '+escapeHtml(entry.title):''}</small>${entry.job&&entry.job.title?`<small>${escapeHtml(entry.job.title)}${entry.job.sector?' @'+escapeHtml(entry.job.sector):''}</small>`:''}</div><b class="amt">${formatMoney(entry.nw)}</b></div>`).join('')||'<div class="empty">No accounts</div>';
+  pick('#netList').innerHTML=Object.values(state.network||{}).filter(entry=>entry&&entry.u&&entry.u!=='admin').sort((a,b)=>(b.nw||0)-(a.nw||0)||a.u.localeCompare(b.u)).map(entry=>`<div class="row nr${entry.u===me?' me':''}"><div class="av sm">${escapeHtml(entry.u[0].toUpperCase())}</div><div class="gr"><b>${escapeHtml(entry.name||entry.u)}</b><small>@${escapeHtml(entry.u)}${entry.title?' · '+escapeHtml(entry.title):''}</small>${entry.job&&entry.job.title?`<small>${escapeHtml(entry.job.title)}${entry.job.sector?' @'+escapeHtml(entry.job.sector):''}</small>`:''}</div><b class="amt">${formatMoney(entry.nw)}</b></div>`).join('')||'<div class="empty">No accounts</div>';
 }
 function syncNetworkEntry(){
   if(state.networkSyncTimer||!state.user||state.impersonation)return;
@@ -1565,11 +1566,10 @@ function syncNetworkEntry(){
       if(!account||!account.u||account.u==='admin')return;
       const entry=state.network[account.u],job=account.job||{};
       const worth=Math.round((isSelf?netWorthOf(account):(account.main||0)+(account.savings||0))*1e8)/1e8;
-      const stale=!entry||(isSelf&&(entry.name!==account.name||Math.abs((entry.nw||0)-worth)>1e-6||(entry.avatar||'')!==(account.avatar||'')||(entry.title||'')!==(account.title||'')||(entry.job&&entry.job.title||'')!==(job.title||'')||(entry.job&&entry.job.sector||'')!==(job.sector||'')));
+      const stale=!entry||(isSelf&&(entry.name!==account.name||Math.abs((entry.nw||0)-worth)>1e-6||(entry.title||'')!==(account.title||'')||(entry.job&&entry.job.title||'')!==(job.title||'')||(entry.job&&entry.job.sector||'')!==(job.sector||'')));
       if(!stale)return;
       const next={u:account.u,name:account.name,nw:worth};
       if(account.job)next.job={title:account.job.title,sector:account.job.sector||''};
-      if(account.avatar)next.avatar=account.avatar;
       if(account.title)next.title=account.title;
       state.network[account.u]=next;
       bank.child('network/'+account.u).set(next);
@@ -1599,7 +1599,7 @@ function adminSync(){
 }
 
 const xpFor=tx=>({transfer:10,merchant:10,trade:10,gift:10,job:10,repayment:10,term:10})[tx.type]||0;
-const paymentActions=new Set(['send','pay','requestPay','loanRepay','refundSale','formSubmit','claimDaily','spinWheel','termCollect','giftUnwrap','jobAccept','jobApprove','jobCancel','jobReject','jobSubmit','loanApprove','loanReject','mgFund','mgTake','mgPay','mgCharge']);
+const paymentActions=new Set(['send','pay','requestPay','loanRepay','refundSale','formSubmit','claimDaily','termCollect','companyDelist','giftUnwrap','jobAccept','jobApprove','jobCancel','jobReject','jobSubmit','loanApprove','loanReject','mgFund','mgTake','mgPay','mgCharge']);
 const submitActions=new Set([...paymentActions,'requestSend','loanApply','saveGo','qr','apply','itemSave','exportPrint','exportCsv','profile','mint','burn','sweep','rates','approve','reject','broadcast','mgJob','mgMsg','mgFreeze','mgFire','mgMerch','mgRole','mgPrivileges','mgSetPin','mgSetPassword','mgResetPin','changePin','cardFreeze','cardSkin','voucherRemove','marketToggle','deviceForget','requestDecline','requestCancel']);
 function describeActorAction(name,target){
   if(name==='formSubmit'&&state.form)return state.form.title;
@@ -1637,7 +1637,7 @@ pick('#scCode').addEventListener('input',e=>e.target.value=e.target.value.toUppe
 document.addEventListener('touchmove',event=>{if(event.touches.length>1)event.preventDefault()},{passive:false});
 addEventListener('load',async()=>{navigator.serviceWorker?.register('sw.js').catch(()=>{});
 firebase.database().ref('.info/serverTimeOffset').on('value',x=>state.serverOffset=x.val()||0);
-bank.child('vault').transaction(v=>v||{reserve:0,tax:0,minted:0,apr:3,sales:2,xfer:.5,wage:5,loanApr:8,dailyBase:1,termApr:5});bank.child('vault').on('value',s=>{if(s.val()){state.vault={...state.vault,...s.val()};renderVault()}});
+bank.child('vault').transaction(v=>v||{reserve:0,tax:0,minted:0,apr:3,sales:2,xfer:.5,wage:5,loanApr:8,dailyBase:.5,termApr:5});bank.child('vault').on('value',s=>{if(s.val()){state.vault={...state.vault,...s.val()};renderVault()}});
 let s=null;try{s=JSON.parse(localStorage.getItem('skb'))}catch(e){}
 if(s&&s.u){const v=(await bank.child('users/'+s.u).once('value')).val();if(v&&v.ph===s.h){if(!v.session)return beginSession(s.u,s.h);if(s.t&&v.session.token===s.t)return beginSession(s.u,s.h,s.t);showToast('Signed out: your account was opened on another device','error')}}
 pick('#auth').classList.add('on')});

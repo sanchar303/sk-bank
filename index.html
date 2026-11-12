@@ -40,7 +40,6 @@
       </div>
     </div>
   </div>
-  <footer class="foot">© 2026 Sanchar Koirala | All rights reserved</footer>
 </section>
 
 <div id="app" class="hide">
@@ -75,49 +74,6 @@
             <div class="btn glass" data-act="requestOpen" role="button"><svg class="i"><use href="#i-request"/></svg>Request</div>
             <div class="btn glass" data-act="scan" role="button"><svg class="i"><use href="#i-qr"/></svg>Scan</div>
           </div>
-
-
-
-
-
-<div
-  id="skMainRealWithdrawal"
-  class="sk-main-real-withdrawal"
-  role="link"
-  tabindex="0"
-  aria-label="Withdraw main balance into real money"
-  data-url="https://sk-bank.pages.dev/withdraw"
-  onclick="window.location.assign(this.dataset.url)"
-  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"
->
-  <span class="sk-main-real-withdrawal__icon">
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
-        stroke="currentColor" stroke-width="1.8"
-        stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M19 15l2 2-2 2"
-        stroke="currentColor" stroke-width="1.8"
-        stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </span>
-
-  <span class="sk-main-real-withdrawal__text">
-    Withdraw to Real Money
-  </span>
-
-  <svg class="sk-main-real-withdrawal__arrow"
-       viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M5 12h14m-6-6 6 6-6 6"
-      stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-</div>
-
-
-
-
-
-          
         </div>
         <div class="card sav">
           <div class="sp"><small>Savings</small><span id="apr" class="tag">3.0% APR</span></div>
@@ -128,6 +84,7 @@
           </div>
         </div>
       </div>
+      <div id="cashoutCard" class="card cashout"><div class="cash-row"><div class="cash-copy"><b>Cash out</b><small>Withdraw your main balance to real money</small><small id="withdrawInfo" class="pending-note"></small></div><div class="btn secondary" data-act="withdrawOpen" role="button"><svg class="i"><use href="#i-lock"/></svg>Withdraw</div></div></div>
       <div id="pinNotice" class="card notice hide"><div class="loan-note"><span>Set a transaction PIN to send and pay</span><div class="btn sm primary" data-act="changePin" role="button">Set up</div></div></div>
       <div id="dailyHome" class="card"><div class="ch"><b>Daily Reward</b><div class="lnk" data-act="svcOpen" data-t="rewards">Details</div></div><div id="dailyMini"></div></div>
       <div id="giftsCard" class="card hide"><div class="ch"><b>Gifts</b></div><div id="giftList"></div></div>
@@ -169,7 +126,6 @@
       </div>
       <div id="svc-rewards" class="svc">
         <div class="card"><div class="ch"><b>Daily Reward</b></div><div id="dailyBody"></div></div>
-        <div class="card"><div class="ch"><b>Daily Spin</b></div><div id="spinBody"></div></div>
         <div class="card"><div class="ch"><b>Gifts</b></div><div class="loan-note"><span>Send money wrapped as a gift</span><div class="btn sm secondary" data-act="giftSend" role="button">Send gift</div></div></div>
       </div>
       <div id="svc-card" class="svc hide"><div class="card"><div id="cardBody"></div></div></div>
@@ -201,9 +157,8 @@
 
     <section id="profile" class="view">
       <div class="card narrow profile-card">
-        <div id="pBanner" class="banner b0"></div>
         <div class="mh pm"><div id="pAv" class="av lg">U</div><div><b id="pUser"></b><small id="pTitle"></small><small id="pRole"></small><small id="pJob"></small></div></div>
-        <div class="two"><div class="btn outline sm" data-act="identityOpen" role="button">Customise</div><div class="btn outline sm" data-act="myQr" role="button"><svg class="i"><use href="#i-qr"/></svg>My QR</div></div>
+        <div class="two"><div class="btn outline sm" data-act="identityOpen" role="button">Title</div><div class="btn outline sm" data-act="myQr" role="button"><svg class="i"><use href="#i-qr"/></svg>My QR</div></div>
       </div>
       <div class="card narrow"><div class="ch"><b>Level &amp; Tier</b></div><div id="levelBody"></div></div>
       <div class="card narrow">
@@ -257,7 +212,6 @@
       <div class="card" data-priv="audit"><div class="ch"><b>Audit Log</b></div><div id="auditList" class="scroll"></div></div>
       <div class="card" data-priv="market"><div class="ch"><b>Exchange</b></div><div id="marketAdmin"></div></div>
     </section>
-    <footer class="foot">© 2026 Sanchar Koirala | All rights reserved</footer>
   </main>
 </div>
 

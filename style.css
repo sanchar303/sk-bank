@@ -166,8 +166,6 @@ small{display:block;font-size:12px;color:var(--mut)}
 
 .frac{font-style:normal;font-size:.5em;font-weight:500;opacity:.55;margin-left:2px;letter-spacing:0}
 .nr{cursor:default}.nr:active{transform:none}.nr.me{border-color:rgba(71,230,255,.45);box-shadow:5px 5px 14px rgba(0,0,0,.35),0 0 18px rgba(71,230,255,.16)}
-.foot{text-align:center;color:var(--mut);font-size:12px;letter-spacing:.03em;padding:26px 0 4px}
-.foot::before{content:"";display:block;width:56px;height:2px;margin:0 auto 14px;border-radius:99px;background:linear-gradient(90deg,transparent,var(--neon),transparent);opacity:.6}
 
 @media(min-width:760px){
   .g2{grid-template-columns:1fr 1fr}
@@ -287,26 +285,16 @@ small{display:block;font-size:12px;color:var(--mut)}
 .imp{position:fixed;z-index:29;left:0;right:0;top:calc(var(--hh) + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 16px;background:rgba(240,200,90,.16);border-bottom:1px solid rgba(240,200,90,.4);color:var(--gold);font-weight:700;font-size:12px;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .imp.act{background:rgba(255,107,129,.16);border-color:rgba(255,107,129,.45);color:var(--neg)}
 #app.imp-on .main{top:calc(var(--hh) + env(safe-area-inset-top) + 40px)}
-.profile-card{padding:0 18px 18px;overflow:hidden}
-.banner{height:96px;margin:0 -18px;border-bottom:1px solid var(--line)}
-.pm{margin-top:-30px;position:relative}
-.pm .av{border:3px solid var(--bg)}
-.b0{background:linear-gradient(135deg,#1f6fe5,#25b0f5)}.b1{background:linear-gradient(135deg,#6a58ee,#c06bff)}.b2{background:linear-gradient(135deg,#0f9d78,#3cf5a5)}.b3{background:linear-gradient(135deg,#ff7a59,#ffc15a)}
-.b4{background:linear-gradient(135deg,#ff4d8d,#ff9a6a)}.b5{background:linear-gradient(135deg,#1b2a52,#47e6ff)}.b6{background:linear-gradient(135deg,#2b2f3a,#8b7bff)}.b7{background:linear-gradient(135deg,#d9a82c,#fff0b0)}
-.av.emoji{background:var(--glass);font-size:24px;box-shadow:var(--raise)}.av.lg.emoji{font-size:32px}
+.profile-card{padding:18px}
+.pm{position:relative}
+
 .choices{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
 .choices .rg.locked{opacity:.4;pointer-events:none}
-.choices .sw{width:46px;height:30px;padding:0;border-radius:99px}
-.choices .sw.on{outline:2px solid var(--neon);outline-offset:2px}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px}
 .day{padding:9px 2px;border-radius:20px;text-align:center;background:var(--sunk);box-shadow:var(--sink);font-size:11px;color:var(--mut)}
 .day b{display:block;margin-top:2px;font:600 11px var(--mono);color:var(--ink)}
 .day.done{color:var(--pos)}.day.done b{color:var(--pos)}
 .day.today{color:var(--neon);box-shadow:var(--sink),0 0 16px rgba(71,230,255,.45)}.day.today b{color:var(--neon)}
-.wheel-wrap{position:relative;width:240px;height:240px;margin:6px auto 16px}
-.wheel{width:100%;height:100%;filter:drop-shadow(0 0 18px rgba(139,123,255,.45))}
-.wheel.spinning{transition:transform 4.2s cubic-bezier(.12,.7,.1,1)}
-.wheel-pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border:11px solid transparent;border-top:20px solid var(--neon);filter:drop-shadow(0 0 8px var(--neon));z-index:2}
 .level-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .level-top h2{font-size:26px}
 .perks{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;color:var(--mut);font-size:12px}
@@ -350,155 +338,7 @@ small{display:block;font-size:12px;color:var(--mut)}
 .choices.mt{margin-top:14px}
 #portfolioBody .level-top{margin-bottom:10px}
 
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   SK BANK — REAL MONEY WITHDRAWAL BUTTON
-   ========================================== */
-
-.sk-main-real-withdrawal {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  width: max-content;
-  max-width: 100%;
-  min-height: 46px;
-
-  margin: 0 0 0 auto;
-  padding: 7px 15px 7px 9px;
-
-  border: 1px solid rgba(255, 237, 184, 0.8);
-  border-radius: 15px;
-
-  background: linear-gradient(
-    135deg,
-    #fff0bd 0%,
-    #f0c85a 52%,
-    #c89026 100%
-  );
-
-  color: #241903;
-
-  box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.28),
-    0 0 22px rgba(240, 200, 90, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-
-  transition:
-    transform 0.2s cubic-bezier(.2,.8,.2,1),
-    box-shadow 0.25s,
-    filter 0.25s;
-}
-
-/* Hover */
-
-.sk-main-real-withdrawal:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.07);
-
-  box-shadow:
-    0 11px 26px rgba(0, 0, 0, 0.3),
-    0 0 28px rgba(240, 200, 90, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-/* Press */
-
-.sk-main-real-withdrawal:active {
-  transform: scale(0.96);
-  filter: brightness(0.96);
-  box-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.25),
-    inset 0 2px 5px rgba(80, 50, 0, 0.15);
-}
-
-/* Keyboard accessibility */
-
-.sk-main-real-withdrawal:focus-visible {
-  outline: 3px solid var(--neon);
-  outline-offset: 4px;
-}
-
-/* Icon container */
-
-.sk-main-real-withdrawal__icon {
-  display: grid;
-  place-items: center;
-
-  width: 31px;
-  height: 31px;
-  flex: none;
-
-  border-radius: 10px;
-
-  background: rgba(45, 31, 2, 0.12);
-  border: 1px solid rgba(45, 31, 2, 0.12);
-}
-
-.sk-main-real-withdrawal__icon svg {
-  width: 19px;
-  height: 19px;
-  display: block;
-}
-
-/* Button text */
-
-.sk-main-real-withdrawal__text {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.015em;
-  white-space: nowrap;
-}
-
-/* Arrow */
-
-.sk-main-real-withdrawal__arrow {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  opacity: 0.8;
-  transition: transform 0.2s ease;
-}
-
-.sk-main-real-withdrawal:hover
-.sk-main-real-withdrawal__arrow {
-  transform: translateX(3px);
-}
-
-/* Mobile */
-
-@media (max-width: 420px) {
-  .sk-main-real-withdrawal {
-    min-height: 43px;
-    padding: 6px 12px 6px 8px;
-    gap: 8px;
-  }
-
-  .sk-main-real-withdrawal__text {
-    font-size: 11px;
-  }
-}
-
-/* Reduced motion */
-
-@media (prefers-reduced-motion: reduce) {
-  .sk-main-real-withdrawal,
-  .sk-main-real-withdrawal__arrow {
-    transition: none;
-  }
-}
+.cash-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cash-copy b{display:block;font-size:15px}
+.cashout{border-color:rgba(139,123,255,.35)}
+.pending-note{color:var(--gold)}.pending-note:empty{display:none}
