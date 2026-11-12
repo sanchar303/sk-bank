@@ -74,7 +74,6 @@ input:focus{border-color:rgba(71,230,255,.6);box-shadow:var(--sink),0 0 0 3px rg
 
 
 
-
 .main{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 .btn.gated:not(.ready){opacity:.4;pointer-events:none;filter:saturate(.4)}
 .row.static{cursor:default}.row.static:active{transform:none}
