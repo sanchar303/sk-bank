@@ -1,7 +1,7 @@
 'use strict';
 firebase.initializeApp({apiKey:"AIzaSyDpCAXfhldRc1nCZDWlWNRbcMFjqAh8uPc",authDomain:"cloud-db-studio.firebaseapp.com",databaseURL:"https://cloud-db-studio-default-rtdb.firebaseio.com",projectId:"cloud-db-studio",storageBucket:"cloud-db-studio.firebasestorage.app",messagingSenderId:"343326148662",appId:"1:343326148662:web:987738ccc8f9d6a8253097"});
 const bank=firebase.database().ref('sk-bank'),pick=selector=>document.querySelector(selector),pickAll=selector=>[...document.querySelectorAll(selector)];
-const WITHDRAWAL_SITE_URL='PASTE_YOUR_WITHDRAWAL_WEBSITE_URL_HERE';
+const WITHDRAWAL_SITE_URL='/withdraw';
 const roundCents=n=>Math.round((+n+Number.EPSILON)*100)/100;
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatMoney=n=>'$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
