@@ -95,3 +95,4 @@ input:focus{border-color:rgba(71,230,255,.6);box-shadow:var(--sink),0 0 0 3px rg
 .done h2{font:700 34px var(--mono);color:var(--pos);margin:12px 0 4px;text-shadow:0 0 18px rgba(60,245,165,.5)}
 :root[data-theme=light] .done h2{text-shadow:none}
 .done .btn+.btn{margin-top:10px}
+.fld .dd-head span{display:inline;margin:0;font-size:16px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ink)}

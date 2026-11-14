@@ -1,7 +1,7 @@
 'use strict';
 const firebaseConfig={apiKey:"AIzaSyDpCAXfhldRc1nCZDWlWNRbcMFjqAh8uPc",authDomain:"cloud-db-studio.firebaseapp.com",databaseURL:"https://cloud-db-studio-default-rtdb.firebaseio.com",projectId:"cloud-db-studio",storageBucket:"cloud-db-studio.firebasestorage.app",messagingSenderId:"343326148662",appId:"1:343326148662:web:987738ccc8f9d6a8253097"};
 firebase.initializeApp(firebaseConfig);
-const ADMIN_USERNAME='admin',MAIN_APP_URL='index.html';
+const ADMIN_USERNAME='admin',MAIN_APP_URL='/';
 const bank=firebase.database().ref('sk-bank'),increment=firebase.database.ServerValue.increment;
 const pick=selector=>document.querySelector(selector);
 const state={unlocked:false,busy:false,failures:0,lockedUntil:0,requests:{},idleTimer:null,listener:null};

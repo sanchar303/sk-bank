@@ -2,6 +2,11 @@
 firebase.initializeApp({apiKey:"AIzaSyDpCAXfhldRc1nCZDWlWNRbcMFjqAh8uPc",authDomain:"cloud-db-studio.firebaseapp.com",databaseURL:"https://cloud-db-studio-default-rtdb.firebaseio.com",projectId:"cloud-db-studio",storageBucket:"cloud-db-studio.firebasestorage.app",messagingSenderId:"343326148662",appId:"1:343326148662:web:987738ccc8f9d6a8253097"});
 const bank=firebase.database().ref('sk-bank'),pick=selector=>document.querySelector(selector),pickAll=selector=>[...document.querySelectorAll(selector)];
 const WITHDRAWAL_SITE_URL='/withdraw';
+function navigateTo(address){
+  document.body.classList.add('leaving');
+  setTimeout(()=>{window.location.href=address},260);
+}
+addEventListener('pageshow',event=>{if(event.persisted)document.body.classList.remove('leaving')});
 const roundCents=n=>Math.round((+n+Number.EPSILON)*100)/100;
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatMoney=n=>'$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -148,7 +153,7 @@ try{await ref.set(r);if((await ref.once('value')).val()!==r)throw 0;toggleModal(
 };
 const weekMs=6048e5;
 Object.assign(state,{requests:[],loans:[],allLoans:{},stats:{},exportRange:'month',pinResolver:null,pinFailures:0,pinLockedUntil:0});
-Object.assign(typeLabels,{fine:'Fine',fee:'Fee',loan:'Loan',repayment:'Repayment',refund:'Refund',withdrawal:'Withdrawal'});
+Object.assign(typeLabels,{fine:'Fine',fee:'Fee',loan:'Loan',repayment:'Repayment',refund:'Refund',withdrawal:'Withdrawal',trade:'Trade',escrow:'Collateral',job:'Job',reward:'Reward',gift:'Gift',term:'Term deposit'});
 filterTypes.transfer.push('fine','fee','loan','repayment');
 filterTypes.merchant.push('refund');
 
@@ -1047,6 +1052,10 @@ async function sendGift({to,amount,message,theme}){
   showToast('Gift sent','success');
   return true;
 }
+function renderPendingWithdrawals(){
+  const entries=Object.values(state.pendingWithdrawals||{}),total=entries.reduce((sum,entry)=>sum+entry.amount,0);
+  setText('adminWithdrawInfo',entries.length?`${entries.length} pending · ${formatMoney(total)}`:'No pending requests');
+}
 function renderWithdrawCard(){
   const pending=state.pendingWithdrawal;
   setText('withdrawInfo',pending?`Pending request · ${formatMoney(pending.amount)}`:'');
@@ -1143,41 +1152,42 @@ function renderInvest(){
   }).join(''):'<div class="empty">No holdings</div>';
   pick('#marketBody').innerHTML=markets.map(market=>{
     const change=changeOf(market);
-    return`<div class="row" data-act="marketTrade" data-s="${market.symbol}"><div class="ic sv">${escapeHtml(market.symbol.slice(0,2))}</div><div class="gr"><b>${escapeHtml(market.symbol)} · ${escapeHtml(market.name)}</b><small>${market.status==='halted'?'Halted':formatMoney(marketPrice(market))}</small></div><b class="amt ${change>=0?'up':'down'}">${change>=0?'+':''}${change.toFixed(2)}%</b></div>`;
+    return`<div class="row" data-act="marketTrade" data-s="${market.symbol}"><div class="ic sv">${escapeHtml(market.symbol.slice(0,2))}</div><div class="gr"><b>${escapeHtml(market.symbol)} · ${escapeHtml(market.name)}</b><small>${market.status==='open'?formatMoney(marketPrice(market)):market.status==='closing'?'Closing':'Halted'}</small></div><b class="amt ${change>=0?'up':'down'}">${change>=0?'+':''}${change.toFixed(2)}%</b></div>`;
   }).join('')||'<div class="empty">No companies listed</div>';
   const listed=markets.find(market=>market.owner===state.username);
   const manage=pick('#companyManage');
   if(!manage)return;
   if(!listed){manage.innerHTML='<div class="loan-note"><span>List your business on the exchange</span><div class="btn sm secondary" data-act="companyList">List</div></div>';return}
-  const float=listed.floatShares||listed.totalShares-Math.floor(listed.totalShares*.6),change=changeOf(listed);
-  manage.innerHTML=`<div class="loan-top"><div><small>${escapeHtml(listed.symbol)}</small><h2>${formatMoney(marketPrice(listed))}</h2></div><span class="tag${change>=0?' ok':' r'}">${change.toFixed(2)}%</span></div><div class="loan-meta"><span>${listed.totalShares} shares · ${formatMoney(listed.collateral||0)} collateral</span><span>${Math.floor(listed.totalShares*.6)} locked</span></div>${listed.poolShares===float?'<div class="btn outline" data-act="companyDelist">Delist and release collateral</div>':'<div class="btn outline disabled">Held by investors</div>'}`;
+  const change=changeOf(listed),status=listed.status==='open'?'Open':listed.status==='closing'?'Closing':'Halted';
+  manage.innerHTML=`<div class="loan-top"><div><small>${escapeHtml(listed.symbol)}</small><h2>${formatMoney(marketPrice(listed))}</h2></div><span class="tag${listed.status==='open'?' ok':' r'}">${status}</span></div><div class="loan-meta"><span>${listed.totalShares} shares · ${change.toFixed(2)}% today</span><span>${formatMoney(listed.collateral||0)} collateral</span></div><div class="two"><div class="btn outline" data-act="companyHalt">${listed.status==='halted'?'Resume trading':'Halt trading'}</div><div class="btn danger" data-act="companyClose">Close market</div></div>`;
 }
 function renderMarketAdmin(){
   const element=pick('#marketAdmin');
   if(!element)return;
-  element.innerHTML=Object.values(state.market||{}).map(market=>`<div class="row nr"><div class="gr"><b>${escapeHtml(market.symbol)} · ${escapeHtml(market.name)}</b><small>${formatMoney(marketPrice(market))} · @${escapeHtml(market.owner)}</small></div><div class="btn sm outline" data-act="marketToggle" data-s="${market.symbol}">${market.status==='halted'?'Resume':'Halt'}</div></div>`).join('')||'<div class="empty">No companies</div>';
+  element.innerHTML=Object.values(state.market||{}).map(market=>`<div class="row nr"><div class="gr"><b>${escapeHtml(market.symbol)} · ${escapeHtml(market.name)}</b><small>${formatMoney(marketPrice(market))} · @${escapeHtml(market.owner)}</small></div>${market.status==='closing'?'<span class="tag r">Closing</span>':`<div class="btn sm outline" data-act="marketToggle" data-s="${market.symbol}">${market.status==='halted'?'Resume':'Halt'}</div>`}</div>`).join('')||'<div class="empty">No companies</div>';
 }
 const buyCost=(market,shares)=>Math.ceil((market.poolCash*market.poolShares/(market.poolShares-shares)-market.poolCash)*100-1e-9)/100;
 const sellPayout=(market,shares)=>Math.floor((market.poolCash-market.poolCash*market.poolShares/(market.poolShares+shares))*100+1e-9)/100;
-function nextMarketState(market,poolShares,volume){
+function nextMarketState(market,poolShares,volume,cashChange){
   const today=localDay(),price=marketPrice(market);
-  return{...market,poolShares,poolCash:market.poolCash*market.poolShares/poolShares,dayKey:today,dayOpen:market.dayKey===today?market.dayOpen:price,volume:(market.volume||0)+volume};
+  return{...market,poolShares,poolCash:market.poolCash*market.poolShares/poolShares,cash:roundCents((market.cash||0)+cashChange),dayKey:today,dayOpen:market.dayKey===today?market.dayOpen:price,volume:(market.volume||0)+volume};
 }
 const recordPrice=(symbol,market)=>bank.child('marketHistory/'+symbol).push({t:serverNow(),p:marketPrice(market)});
 async function buyShares(symbol,shares){
   const me=state.username,quote=state.market[symbol];
+  if(quote.status!=='open'){showToast('Trading is halted','error');return false}
   if(shares>Math.floor(quote.poolShares*.25)){showToast('Order too large','error');return false}
   const estimate=buyCost(quote,shares);
   if(!await adjustBalance('users/'+me+'/main',-estimate)){showToast('Insufficient balance','error');return false}
   let cost=0;
   const result=await bank.child('market/'+symbol).transaction(market=>{
-    if(!market||market.status==='halted'||shares>=market.poolShares)return;
+    if(!market||market.status!=='open'||shares>=market.poolShares)return;
     const price=buyCost(market,shares);
     if(price>estimate+.005)return;
     cost=price;
-    return nextMarketState(market,market.poolShares-shares,shares);
+    return nextMarketState(market,market.poolShares-shares,shares,price);
   });
-  if(!result.committed){await adjustBalance('users/'+me+'/main',estimate);showToast('Price moved. Try again','error');return false}
+  if(!result.committed){await adjustBalance('users/'+me+'/main',estimate);showToast('Price moved or trading halted. Try again','error');return false}
   const refund=roundCents(estimate-cost);
   if(refund>0)await adjustBalance('users/'+me+'/main',refund);
   await adjustBalance('vault/marketHolding',cost);
@@ -1198,9 +1208,9 @@ async function sellShares(symbol,shares){
   });
   if(!removed.committed){showToast('Not enough tradable shares','error');return false}
   const result=await bank.child('market/'+symbol).transaction(market=>{
-    if(!market||market.status==='halted')return;
+    if(!market||market.status!=='open')return;
     payout=sellPayout(market,shares);
-    return nextMarketState(market,market.poolShares+shares,shares);
+    return nextMarketState(market,market.poolShares+shares,shares,-payout);
   });
   if(!result.committed){await bank.child('userHoldings/'+me+'/'+symbol).set(previous);showToast('Trading is halted','error');return false}
   if(!await adjustBalance('vault/marketHolding',-payout))await adjustBalance('vault/reserve',-payout);
@@ -1211,12 +1221,75 @@ async function sellShares(symbol,shares){
   showToast(`Sold ${shares} ${symbol}`,'success');
   return true;
 }
-
+const toCents=value=>Math.round(value*100);
+const floatOf=market=>market.floatShares||market.totalShares-Math.floor(market.totalShares*.6);
+async function collectHolders(symbol){
+  const snapshot=await bank.child('userHoldings').once('value');
+  const holders=[];
+  Object.entries(snapshot.val()||{}).forEach(([username,holdings])=>{
+    const holding=holdings&&holdings[symbol];
+    const tradable=holding?holding.shares-(holding.locked||0):0;
+    if(tradable>0)holders.push({username,shares:tradable});
+  });
+  return holders;
+}
+function settlementPlan(market,holders){
+  const price=marketPrice(market),cashCents=toCents(market.cash||0),collateralCents=toCents(market.collateral||0),available=cashCents+collateralCents;
+  const gross=holders.map(holder=>({...holder,cents:Math.floor(holder.shares*price*100+1e-6)}));
+  const total=gross.reduce((sum,holder)=>sum+holder.cents,0);
+  const scale=total>available?available/total:1;
+  const payouts=gross.map(holder=>({...holder,cents:Math.floor(holder.cents*scale+1e-6)}));
+  const paid=payouts.reduce((sum,holder)=>sum+holder.cents,0);
+  return{price,payouts,paid,total,available,cashCents,collateralCents,ownerCents:available-paid,shortfall:Math.max(0,total-available)};
+}
+async function closeMarket(symbol){
+  const me=state.username;
+  const claim=await bank.child('market/'+symbol).transaction(market=>market&&market.owner===me?{...market,status:'closing'}:undefined);
+  if(!claim.committed){showToast('Market not found','error');return false}
+  await wait(1500);
+  const market=(await bank.child('market/'+symbol).once('value')).val();
+  const holders=await collectHolders(symbol);
+  const outside=holders.reduce((sum,holder)=>sum+holder.shares,0);
+  if(Math.abs(outside-(floatOf(market)-market.poolShares))>1e-9){showToast('Trades are still settling. Try again in a moment','error');return false}
+  if(market.cash===undefined&&holders.length){showToast('This older listing cannot be closed while investors hold shares','error');return false}
+  const plan=settlementPlan(market,holders),now=serverNow(),updates={};
+  const tag=Date.now().toString(36).toUpperCase();
+  const record=(username,suffix,entry)=>{
+    const id='TX'+tag+suffix,full={id,ts:now,tax:0,...entry};
+    updates['ledger/'+id]=full;
+    updates['userTx/'+username+'/'+id]=full;
+    updates['notes/'+username+'/N'+tag+suffix]={ts:now,cat:'earnings',title:'Market closed',msg:entry.note,read:false};
+  };
+  plan.payouts.forEach((holder,index)=>{
+    updates['userHoldings/'+holder.username+'/'+symbol]=null;
+    if(holder.cents<=0)return;
+    const amount=holder.cents/100;
+    updates['users/'+holder.username+'/main']=increment(amount);
+    record(holder.username,'I'+index,{type:'trade',from:'Exchange',to:holder.username,fromName:symbol+' shares',toName:holder.username,amt:amount,net:amount,note:`CLOSE ${holder.shares} ${symbol} @ ${plainAmount(plan.price)}`});
+  });
+  const ownerAmount=plan.ownerCents/100;
+  if(ownerAmount>0){
+    updates['users/'+me+'/main']=increment(ownerAmount);
+    record(me,'O',{type:'escrow',from:'SK Bank',to:me,fromName:'Market close',toName:state.user.name,amt:ownerAmount,net:ownerAmount,note:`Market closed · ${symbol} collateral and proceeds returned`});
+  }
+  updates['userHoldings/'+me+'/'+symbol]=null;
+  updates['vault/marketHolding']=increment(-plan.cashCents/100);
+  updates['vault/marketCollateral']=increment(-plan.collateralCents/100);
+  updates['market/'+symbol]=null;
+  updates['marketHistory/'+symbol]=null;
+  await bank.update(updates);
+  showToast(`${symbol} closed`,'success');
+  return true;
+}
 Object.assign(actions,{
   withdrawOpen(){
     if(!WITHDRAWAL_SITE_URL||WITHDRAWAL_SITE_URL.startsWith('PASTE_'))return showToast('Withdrawals are not available yet','info');
-    window.open(WITHDRAWAL_SITE_URL,'_blank','noopener,noreferrer');
+    if(state.impersonation)return showToast('Not available while viewing another account','info');
+    const address=new URL(WITHDRAWAL_SITE_URL,window.location.href);
+    address.searchParams.set('account',state.username);
+    navigateTo(address.href);
   },
+  adminWithdrawals(){navigateTo('admin.html')},
   svcTab(target){
     pickAll('#svcTabs .rg').forEach(chip=>chip.classList.toggle('on',chip===target));
     pickAll('.svc').forEach(section=>section.classList.toggle('hide',section.id!=='svc-'+target.dataset.t));
@@ -1451,7 +1524,7 @@ Object.assign(actions,{
       if((state.user.main||0)<collateral){showToast(`You need ${formatMoney(collateral)} in your balance to list`,'error');return false}
       if(isFrozen()||!await authorizePayment())return false;
       const founder=Math.floor(total*.6),pool=total-founder;
-      const market={symbol,name:state.merchant.biz,owner:me,totalShares:total,floatShares:pool,poolShares:pool,poolCash:roundCents(pool*price),collateral,dayKey:localDay(),dayOpen:price,volume:0,status:'open',ts:serverNow()};
+      const market={symbol,name:state.merchant.biz,owner:me,totalShares:total,floatShares:pool,poolShares:pool,poolCash:roundCents(pool*price),cash:0,collateral,dayKey:localDay(),dayOpen:price,volume:0,status:'open',ts:serverNow()};
       if(!(await bank.child('market/'+symbol).transaction(existing=>existing?undefined:market)).committed){showToast('Symbol already taken','error');return false}
       if(!await adjustBalance('users/'+me+'/main',-collateral)){await bank.child('market/'+symbol).remove();showToast('Insufficient balance','error');return false}
       await adjustBalance('vault/marketCollateral',collateral);
@@ -1461,20 +1534,25 @@ Object.assign(actions,{
       showToast(symbol+' is now listed','success');
     }});
   },
-  async companyDelist(){
-    const market=Object.values(state.market).find(item=>item.owner===state.username),me=state.username;
+  async companyHalt(){
+    const market=Object.values(state.market).find(item=>item.owner===state.username);
+    if(!market||market.status==='closing')return;
+    const next=market.status==='halted'?'open':'halted';
+    await bank.child('market/'+market.symbol+'/status').set(next);
+    showToast(next==='halted'?'Trading halted':'Trading resumed','success');
+  },
+  async companyClose(){
+    const market=Object.values(state.market).find(item=>item.owner===state.username);
     if(!market)return;
-    const float=market.floatShares||market.totalShares-Math.floor(market.totalShares*.6);
-    if(market.poolShares!==float)return showToast('Shares are held by other investors','error');
-    if(!await authorizePayment())return;
-    const collateral=market.collateral||0;
-    await bank.update({['market/'+market.symbol]:null,['marketHistory/'+market.symbol]:null,['userHoldings/'+me+'/'+market.symbol]:null});
-    if(collateral){
-      if(!await adjustBalance('vault/marketCollateral',-collateral))await adjustBalance('vault/reserve',-collateral);
-      await adjustBalance('users/'+me+'/main',collateral);
-      await recordTransaction({type:'escrow',from:'SK Bank',to:me,fromName:'Listing collateral',toName:state.user.name,amt:collateral,net:collateral,note:'Collateral returned · '+market.symbol,p:[me]});
-    }
-    showToast(market.symbol+' delisted','success');
+    if(market.cash===undefined&&floatOf(market)!==market.poolShares)return showToast('This older listing cannot be closed while investors hold shares','error');
+    const holders=await collectHolders(market.symbol),plan=settlementPlan(market,holders);
+    const hint=`Investors ${formatMoney(plan.paid/100)} · you receive ${formatMoney(plan.ownerCents/100)}${plan.shortfall?' · investors take a loss on the shortfall':''}`;
+    openForm({title:`Close ${market.symbol}`,submit:'Close market',hint,fields:[
+      {type:'html',html:`<div class="loan-meta"><span>${holders.length} investor${holders.length===1?'':'s'}</span><span>Final price ${formatMoney(plan.price)}</span></div>`}
+    ],onSubmit:async()=>{
+      if(isFrozen()||!await authorizePayment())return false;
+      return closeMarket(market.symbol);
+    }});
   },
   async marketTrade(target){
     const symbol=target.dataset.s,market=state.market[symbol];
@@ -1493,14 +1571,14 @@ Object.assign(actions,{
     },onSubmit:async values=>{
       const shares=Math.floor(+values.shares);
       if(!(shares>0)){showToast('Enter shares','error');return false}
-      if(state.market[symbol].status==='halted'){showToast('Trading is halted','error');return false}
+      if(state.market[symbol].status!=='open'){showToast('Trading is halted','error');return false}
       if(isFrozen()||!await authorizePayment())return false;
       return values.side==='buy'?buyShares(symbol,shares):sellShares(symbol,shares);
     }});
   },
   marketToggle(target){
     const symbol=target.dataset.s,market=state.market[symbol];
-    if(market)return bank.child('market/'+symbol+'/status').set(market.status==='halted'?'open':'halted');
+    if(market&&market.status!=='closing')return bank.child('market/'+symbol+'/status').set(market.status==='halted'?'open':'halted');
   }
 });
 
@@ -1583,23 +1661,24 @@ function adminSync(){
   if(active===Boolean(state.adminActive))return;
   state.adminActive=active;
   if(active){
-    state.adminRefs=[bank.child('users'),bank.child('merchants'),bank.child('ledger').limitToLast(100),bank.child('loans'),bank.child('stats'),bank.child('audit').limitToLast(150)];
-    const [users,merchants,ledger,loans,stats,audit]=state.adminRefs;
+    state.adminRefs=[bank.child('users'),bank.child('merchants'),bank.child('ledger').limitToLast(100),bank.child('loans'),bank.child('stats'),bank.child('audit').limitToLast(150),bank.child('pendingWithdrawals')];
+    const [users,merchants,ledger,loans,stats,audit,pendingWithdrawals]=state.adminRefs;
     users.on('value',snapshot=>{state.users=snapshot.val()||{};renderAdmin()});
     merchants.on('value',snapshot=>{state.allMerchants=snapshot.val()||{};renderAdmin()});
     ledger.on('value',snapshot=>{state.ledger=Object.values(snapshot.val()||{}).sort((a,b)=>b.ts-a.ts);renderAdmin()});
     loans.on('value',snapshot=>{state.allLoans=snapshot.val()||{};renderAdmin()});
     stats.on('value',snapshot=>{state.stats=snapshot.val()||{};renderAdmin()});
+    pendingWithdrawals.on('value',snapshot=>{state.pendingWithdrawals=snapshot.val()||{};renderPendingWithdrawals()});
     audit.on('value',snapshot=>{state.audit=Object.values(snapshot.val()||{}).sort((a,b)=>b.ts-a.ts);renderAdmin()});
   }else{
     (state.adminRefs||[]).forEach(ref=>ref.off());
-    Object.assign(state,{adminRefs:[],users:{},allMerchants:{},ledger:[],allLoans:{},stats:{},audit:[]});
+    Object.assign(state,{adminRefs:[],users:{},allMerchants:{},ledger:[],allLoans:{},stats:{},audit:[],pendingWithdrawals:{}});
     toggleModal('mg',false);
   }
 }
 
 const xpFor=tx=>({transfer:10,merchant:10,trade:10,gift:10,job:10,repayment:10,term:10})[tx.type]||0;
-const paymentActions=new Set(['send','pay','requestPay','loanRepay','refundSale','formSubmit','claimDaily','termCollect','companyDelist','giftUnwrap','jobAccept','jobApprove','jobCancel','jobReject','jobSubmit','loanApprove','loanReject','mgFund','mgTake','mgPay','mgCharge']);
+const paymentActions=new Set(['send','pay','requestPay','loanRepay','refundSale','formSubmit','claimDaily','termCollect','companyClose','giftUnwrap','jobAccept','jobApprove','jobCancel','jobReject','jobSubmit','loanApprove','loanReject','mgFund','mgTake','mgPay','mgCharge']);
 const submitActions=new Set([...paymentActions,'requestSend','loanApply','saveGo','qr','apply','itemSave','exportPrint','exportCsv','profile','mint','burn','sweep','rates','approve','reject','broadcast','mgJob','mgMsg','mgFreeze','mgFire','mgMerch','mgRole','mgPrivileges','mgSetPin','mgSetPassword','mgResetPin','changePin','cardFreeze','cardSkin','voucherRemove','marketToggle','deviceForget','requestDecline','requestCancel']);
 function describeActorAction(name,target){
   if(name==='formSubmit'&&state.form)return state.form.title;
